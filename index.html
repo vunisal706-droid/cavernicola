@@ -312,7 +312,7 @@ document.addEventListener('keydown',e=>{
     // Capturar números tanto del teclado principal como del numpad
     const keyNum=parseInt(e.key);
     if(!isNaN(keyNum)&&keyNum>=0&&keyNum<=9){
-      if(mathQuiz.input.length<1){
+      if(mathQuiz.input.length<2){
         mathQuiz.input+=String(keyNum);
         sfxClick();
       }
@@ -386,7 +386,7 @@ function handleKeyboardClick(){
       }else{
         // Asegurar que solo se agreguen números
         const num=parseInt(btn.value);
-        if(!isNaN(num)&&mathQuiz.input.length<1){
+        if(!isNaN(num)&&mathQuiz.input.length<2){
           mathQuiz.input+=String(num);
           sfxClick();
         }
