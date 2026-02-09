@@ -187,6 +187,7 @@ canvas{
 </style>
 <base target="_blank">
 <base target="_blank">
+<base target="_blank">
 </head>
 <body>
 <div id="game-container">
@@ -964,53 +965,61 @@ function startMathQuiz(chest){
   createVirtualKeyboard();
 }
 
-function createVirtualKeyboard(){
-  mathQuiz.keyboard.buttons=[];
-  const btnW=32,btnH=32,gap=6;
-  const startX=(W-(btnW*5+gap*4))/2;
-  const startY=155;
+function createVirtualKeyboard(){mathQuiz.keyboard.buttons=[];
+  // Botones mas pequenos para que quepan todos (0-9)
+  const btnW=26,btnH=26,gap=4;
+  const cols=5;
 
-  // Numbers 0-4 in first row
+  // Calcular ancho total y centrar en pantalla
+  const totalWidth=cols*btnW + (cols-1)*gap;
+  const startX=(W-totalWidth)/2;
+  const startY=145;
+
+  // Primera fila: 1,2,3,4,5
   for(let i=0;i<5;i++){
     mathQuiz.keyboard.buttons.push({
       x:startX+i*(btnW+gap),
       y:startY,
       w:btnW,
       h:btnH,
-      value:String(i),
-      label:String(i)
+      value:String(i+1),
+      label:String(i+1)
     });
   }
-  // Numbers 5-9 in second row
+
+  // Segunda fila: 6,7,8,9,0
   for(let i=0;i<5;i++){
+    const num=i===4?0:i+6;
     mathQuiz.keyboard.buttons.push({
       x:startX+i*(btnW+gap),
       y:startY+btnH+gap,
       w:btnW,
       h:btnH,
-      value:String(i+5),
-      label:String(i+5)
+      value:String(num),
+      label:String(num)
     });
   }
 
-  // Back button (smaller)
+  // Tercera fila: Back y Check
+  const backW=55;
+  const checkW=totalWidth-backW-gap;
+
   mathQuiz.keyboard.buttons.push({
     x:startX,
     y:startY+2*(btnH+gap),
-    w:btnW*2+gap,
+    w:backW,
     h:btnH,
     value:'back',
-    label:'⌫'
+    label:'<-'
   });
 
-  // Check button
   mathQuiz.keyboard.buttons.push({
-    x:startX+2*(btnW+gap)+gap,
+    x:startX+backW+gap,
     y:startY+2*(btnH+gap),
-    w:btnW*3+gap*2,
+    w:checkW,
     h:btnH,
     value:'check',
-    label:'✓ OK'
+    label:'OK'
   });
 }
 
@@ -2114,6 +2123,101 @@ function drawParts(){
     $.fillRect(p.x,p.y,p.size,p.size);
   }
   $.globalAlpha=1;
+}
+
+function drawMathQuiz(){
+  if(!mathQuiz.active)return;
+
+  // Fondo oscuro semitransparente
+  $.fillStyle='rgba(0,0,0,0.9)';
+  $.fillRect(0,0,W,H);
+
+  // Panel del quiz
+  const panelW=360;
+  const panelH=140;
+  const panelX=(W-panelW)/2;
+  const panelY=15;
+
+  // Fondo del panel
+  $.fillStyle='#2a2a3a';
+  $.strokeStyle='#5a5a6a';
+  $.lineWidth=2;
+  $.fillRect(panelX,panelY,panelW,panelH);
+  $.strokeRect(panelX,panelY,panelW,panelH);
+
+  // Titulo
+  $.font='bold 14px Arial';
+  $.fillStyle='#ffd700';
+  $.textAlign='center';
+  $.fillText('RESUELVE PARA ABRIR LA CAJA',W/2,panelY+20);
+
+  // Indicador de suma o resta
+  $.font='11px Arial';
+  $.fillStyle=mathQuiz.isAddition?'#60ff60':'#ff6060';
+  const opText=mathQuiz.isAddition?'SUMA (+)':'RESTA (-)';
+  $.fillText(opText,W/2,panelY+35);
+
+  // Pregunta grande
+  $.font='bold 28px Arial';
+  $.fillStyle='#ffffff';
+  $.fillText(mathQuiz.question,W/2,panelY+70);
+
+  // Input del usuario con cursor
+  $.font='bold 32px Arial';
+  $.fillStyle='#ffd700';
+  const cursor=Math.floor(Date.now()/500)%2===0?'_':'';
+  const displayText=(mathQuiz.input||'')+cursor;
+  $.fillText(displayText,W/2,panelY+105);
+
+  // Dibujar botones del teclado
+  for(const btn of mathQuiz.keyboard.buttons){
+    // Color segun tipo
+    if(btn.value==='check'){
+      $.fillStyle=mathQuiz.keyboard.hoveredBtn===btn?'#4aff4a':'#2a5a2a';
+      $.strokeStyle='#4aff4a';
+    }else if(btn.value==='back'){
+      $.fillStyle=mathQuiz.keyboard.hoveredBtn===btn?'#ff6a6a':'#5a2a2a';
+      $.strokeStyle='#ff4a4a';
+    }else{
+      $.fillStyle=mathQuiz.keyboard.hoveredBtn===btn?'#5a5a7a':'#3a3a4a';
+      $.strokeStyle='#6a6a8a';
+    }
+
+    // Dibujar boton
+    $.lineWidth=2;
+    $.fillRect(btn.x,btn.y,btn.w,btn.h);
+    $.strokeRect(btn.x,btn.y,btn.w,btn.h);
+
+    // Texto del boton
+    $.font='bold 14px Arial';
+    $.fillStyle='#ffffff';
+    $.textAlign='center';
+    $.textBaseline='middle';
+    $.fillText(btn.label,btn.x+btn.w/2,btn.y+btn.h/2);
+  }
+
+  // Resetear alineacion
+  $.textAlign='left';
+  $.textBaseline='alphabetic';
+
+  // Mostrar resultado
+  if(mathQuiz.showResult>0){
+    $.font='bold 18px Arial';
+    $.textAlign='center';
+    if(mathQuiz.correct){
+      $.fillStyle='#60ff60';
+      $.fillText('CORRECTO',W/2,245);
+    }else{
+      $.fillStyle='#ff6060';
+      $.fillText('INTENTALO DE NUEVO',W/2,245);
+    }
+  }
+
+  // Instrucciones
+  $.font='10px Arial';
+  $.fillStyle='#888';
+  $.textAlign='center';
+  $.fillText('Toca los numeros o usa tu teclado',W/2,262);
 }
 
 function drawHUD(){
