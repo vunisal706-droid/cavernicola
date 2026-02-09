@@ -311,7 +311,7 @@ document.addEventListener('keydown',e=>{
     // Capturar números tanto del teclado principal como del numpad
     const keyNum=parseInt(e.key);
     if(!isNaN(keyNum)&&keyNum>=0&&keyNum<=9){
-      if(mathQuiz.input.length<2){
+      if(mathQuiz.input.length<1){
         mathQuiz.input+=String(keyNum);
         sfxClick();
       }
@@ -385,7 +385,7 @@ function handleKeyboardClick(){
       }else{
         // Asegurar que solo se agreguen números
         const num=parseInt(btn.value);
-        if(!isNaN(num)&&mathQuiz.input.length<2){
+        if(!isNaN(num)&&mathQuiz.input.length<1){
           mathQuiz.input+=String(num);
           sfxClick();
         }
@@ -936,23 +936,15 @@ function generateMathQuestion(){
   isAdd=mathQuiz.isAddition;
   
   if(isAdd){
-    a=Math.floor(Math.random()*10)+1;
-    b=Math.floor(Math.random()*10)+1;
-    // Asegurar que no pase de 20
-    while(a+b>20){
-      a=Math.floor(Math.random()*10)+1;
-      b=Math.floor(Math.random()*10)+1;
-    }
+    // Sumas hasta 10 (resultado máximo 10)
+    a=Math.floor(Math.random()*9)+1;
+    b=Math.floor(Math.random()*(10-a))+1;
     ans=a+b;
     text=a+' + '+b+' = ?';
   }else{
-    a=Math.floor(Math.random()*15)+5;
-    b=Math.floor(Math.random()*a);
-    // Sin negativos y sin llevada
-    while(a-b<0 || (a%10)<(b%10)){
-      a=Math.floor(Math.random()*15)+5;
-      b=Math.floor(Math.random()*a);
-    }
+    // Restas hasta 10 (sin negativos)
+    a=Math.floor(Math.random()*9)+2;
+    b=Math.floor(Math.random()*(a-1))+1;
     ans=a-b;
     text=a+' - '+b+' = ?';
   }
@@ -974,48 +966,51 @@ function startMathQuiz(chest){
 
 function createVirtualKeyboard(){
   mathQuiz.keyboard.buttons=[];
-  const btnW=40,btnH=40,gap=8;
-  const startX=(W-(btnW*3+gap*2))/2;
-  const startY=145;
+  const btnW=32,btnH=32,gap=6;
+  const startX=(W-(btnW*5+gap*4))/2;
+  const startY=155;
 
-  for(let i=0;i<9;i++){
-    const row=Math.floor(i/3);
-    const col=i%3;
+  // Numbers 0-4 in first row
+  for(let i=0;i<5;i++){
     mathQuiz.keyboard.buttons.push({
-      x:startX+col*(btnW+gap),
-      y:startY+row*(btnH+gap),
+      x:startX+i*(btnW+gap),
+      y:startY,
       w:btnW,
       h:btnH,
-      value:String(i+1),
-      label:String(i+1)
+      value:String(i),
+      label:String(i)
+    });
+  }
+  // Numbers 5-9 in second row
+  for(let i=0;i<5;i++){
+    mathQuiz.keyboard.buttons.push({
+      x:startX+i*(btnW+gap),
+      y:startY+btnH+gap,
+      w:btnW,
+      h:btnH,
+      value:String(i+5),
+      label:String(i+5)
     });
   }
 
+  // Back button (smaller)
   mathQuiz.keyboard.buttons.push({
     x:startX,
-    y:startY+3*(btnH+gap),
-    w:btnW,
-    h:btnH,
-    value:'0',
-    label:'0'
-  });
-
-  mathQuiz.keyboard.buttons.push({
-    x:startX+(btnW+gap),
-    y:startY+3*(btnH+gap),
-    w:btnW,
+    y:startY+2*(btnH+gap),
+    w:btnW*2+gap,
     h:btnH,
     value:'back',
     label:'⌫'
   });
 
+  // Check button
   mathQuiz.keyboard.buttons.push({
-    x:startX+2*(btnW+gap),
-    y:startY+3*(btnH+gap),
-    w:btnW*2+gap,
+    x:startX+2*(btnW+gap)+gap,
+    y:startY+2*(btnH+gap),
+    w:btnW*3+gap*2,
     h:btnH,
     value:'check',
-    label:'✓'
+    label:'✓ OK'
   });
 }
 
@@ -1057,103 +1052,6 @@ function checkMathAnswer(){
     sfxHit();
     mathQuiz.input='';
   }
-}
-
-function drawMathQuiz(){
-  if(!mathQuiz.active)return;
-  $.fillStyle='rgba(0,0,0,0.88)';
-  $.fillRect(0,0,W,H);
-  const pw=400,ph=260,px=(W-pw)/2,py=(H-ph)/2-10;
-  $.fillStyle='rgba(0,0,0,0.5)';
-  $.fillRect(px+4,py+4,pw,ph);
-  $.fillStyle='#f5f5dc';
-  $.fillRect(px,py,pw,ph);
-  $.strokeStyle='#8b4513';
-  $.lineWidth=5;
-  $.strokeRect(px,py,pw,ph);
-  $.strokeStyle='#5a3a1a';
-  $.lineWidth=2;
-  $.strokeRect(px+2,py+2,pw-4,ph-4);
-  
-  $.font='bold 20px Arial';
-  $.fillStyle='#8b4513';
-  $.textAlign='center';
-  $.fillText('📦 CAJA MISTERIOSA',W/2,py+30);
-  
-  $.font='14px Arial';
-  $.fillStyle='#5a4a3a';
-  $.fillText('Resuelve para abrir y obtener el contenido:',W/2,py+55);
-  
-  $.font='bold 42px Arial';
-  $.fillStyle='#2a1a0a';
-  $.fillText(mathQuiz.question,W/2,py+95);
-  
-  const inputW=120,inputH=45,inputX=(W-inputW)/2,inputY=py+110;
-  $.fillStyle='rgba(0,0,0,0.2)';
-  $.fillRect(inputX+2,inputY+2,inputW,inputH);
-  $.fillStyle='#fff';
-  $.fillRect(inputX,inputY,inputW,inputH);
-  $.strokeStyle='#8b4513';
-  $.lineWidth=3;
-  $.strokeRect(inputX,inputY,inputW,inputH);
-  $.font='bold 36px Arial';
-  $.fillStyle='#000';
-  const displayText=mathQuiz.input+(Math.floor(Date.now()/500)%2==0?'_':'');
-  $.fillText(displayText,W/2,inputY+33);
-
-  for(const btn of mathQuiz.keyboard.buttons){
-    const isHovered=mathQuiz.keyboard.hoveredBtn===btn;
-    const isCheck=btn.value==='check';
-    const isBack=btn.value==='back';
-    $.fillStyle='rgba(0,0,0,0.3)';
-    $.fillRect(btn.x+2,btn.y+2,btn.w,btn.h);
-    if(isCheck){
-      $.fillStyle=isHovered?'#00cc00':'#00aa00';
-    }else if(isBack){
-      $.fillStyle=isHovered?'#ff8800':'#ff6600';
-    }else{
-      $.fillStyle=isHovered?'#8b4513':'#6a4a2a';
-    }
-    $.fillRect(btn.x,btn.y,btn.w,btn.h);
-    $.strokeStyle=isHovered?'#fff':'rgba(0,0,0,0.3)';
-    $.lineWidth=2;
-    $.strokeRect(btn.x,btn.y,btn.w,btn.h);
-    if(isHovered){
-      $.fillStyle='rgba(255,255,255,0.2)';
-      $.fillRect(btn.x,btn.y,btn.w,btn.h/2);
-    }
-    $.font=isCheck?'bold 22px Arial':'bold 20px Arial';
-    $.fillStyle='#fff';
-    $.textAlign='center';
-    $.fillText(btn.label,btn.x+btn.w/2,btn.y+btn.h/2+8);
-  }
-
-  $.font='11px Arial';
-  $.fillStyle='#666';
-  $.textAlign='center';
-  $.fillText('Usa el teclado virtual o el teclado numérico',W/2,py+ph-10);
-
-  if(mathQuiz.showResult>0){
-    $.fillStyle='rgba(0,0,0,0.75)';
-    $.fillRect(px+20,py+70,pw-40,130);
-    $.font='bold 32px Arial';
-    if(mathQuiz.correct){
-      $.fillStyle='#00ff00';
-      $.fillText('¡CORRECTO!',W/2,py+115);
-      $.font='bold 18px Arial';
-      $.fillStyle='#88ff88';
-      $.fillText('✓ Caja abierta',W/2,py+150);
-      $.fillStyle='#ffd700';
-      $.fillText('¡Coge tu recompensa!',W/2,py+175);
-    }else{
-      $.fillStyle='#ff4444';
-      $.fillText('✗ INCORRECTO',W/2,py+115);
-      $.font='bold 16px Arial';
-      $.fillStyle='#ffaaaa';
-      $.fillText('Intenta de nuevo...',W/2,py+150);
-    }
-  }
-  $.textAlign='left';
 }
 
 function startNextLevel(){
