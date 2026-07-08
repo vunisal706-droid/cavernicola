@@ -2,7 +2,10 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, orientation=landscape">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, orientation=landscape">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>TROGLODITA DE SANTA FE</title>
 <style>
 *{
@@ -63,21 +66,20 @@ body{
 
 #game-container{
   position: relative;
-  width: 100%;
-  max-width: 100vw;
-  max-height: 100vh;
-  aspect-ratio: 16/9;
+  /* Ocupa el máximo posible de la pantalla manteniendo 16:9 */
+  width: min(100vw, calc(100dvh * 16 / 9));
+  height: min(100dvh, calc(100vw * 9 / 16));
   background: #000;
   border: 3px solid #222;
   border-radius: 4px;
   box-shadow: 0 0 40px rgba(100,50,200,0.3), inset 0 0 20px rgba(0,0,0,0.5);
 }
 
-@media screen and (max-width: 900px) {
+@media screen and (max-width: 900px), (pointer:coarse) {
   #game-container {
-    width: 100vw;
-    height: 56.25vw;
-    max-height: 60vh;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
   }
 }
 
@@ -225,6 +227,51 @@ window.addEventListener('orientationchange', checkOrientation);
 
 const C=document.getElementById('C'),$=C.getContext('2d');
 const W=480,H=270;
+
+// === Renderizado en alta resolución: gráficos nítidos ===
+let RS=1;
+function resizeCanvas(){
+  const cont=document.getElementById('game-container');
+  const rect=cont.getBoundingClientRect();
+  const dpr=Math.min(window.devicePixelRatio||1,3);
+  RS=Math.max(1,Math.min(6,(rect.width*dpr)/W));
+  C.width=Math.round(W*RS);
+  C.height=Math.round(H*RS);
+  $.imageSmoothingEnabled=true;
+  if('imageSmoothingQuality' in $)$.imageSmoothingQuality='high';
+  $.lineJoin='round';
+  $.lineCap='round';
+}
+resizeCanvas();
+window.addEventListener('resize',resizeCanvas);
+window.addEventListener('orientationchange',()=>setTimeout(resizeCanvas,300));
+document.addEventListener('fullscreenchange',()=>setTimeout(resizeCanvas,150));
+document.addEventListener('webkitfullscreenchange',()=>setTimeout(resizeCanvas,150));
+
+// Los sprites llevan tamaño lógico (_lw/_lh): dibujarlos siempre a ese tamaño
+const _drawImage=$.drawImage.bind($);
+$.drawImage=function(img,dx,dy,dw,dh){
+  if(img&&img._lw!==undefined&&dw===undefined)return _drawImage(img,dx,dy,img._lw,img._lh);
+  if(dw===undefined)return _drawImage(img,dx,dy);
+  return _drawImage(img,dx,dy,dw,dh);
+};
+
+// === Pantalla completa en móvil al primer toque ===
+function goFullscreen(){
+  const el=document.documentElement;
+  const fn=el.requestFullscreen||el.webkitRequestFullscreen;
+  if(fn && !document.fullscreenElement && !document.webkitFullscreenElement){
+    try{
+      const p=fn.call(el,{navigationUI:'hide'});
+      if(p&&p.then)p.then(()=>{
+        if(screen.orientation&&screen.orientation.lock)screen.orientation.lock('landscape').catch(()=>{});
+      }).catch(()=>{});
+    }catch(e){}
+  }
+}
+if(window.matchMedia&&matchMedia('(pointer:coarse)').matches){
+  document.addEventListener('touchend',goFullscreen,{passive:true});
+}
 
 const AudioCtx=window.AudioContext||window.webkitAudioContext;
 let audioCtx;
@@ -399,10 +446,15 @@ function handleKeyboardClick(){
 }
 
 function mkSpr(name,w,h,fn){
+  // Sprites supermuestreados a 4x para gráficos nítidos
+  const SS=4;
   const c=document.createElement('canvas');
-  c.width=w;
-  c.height=h;
+  c.width=w*SS;
+  c.height=h*SS;
+  c._lw=w;
+  c._lh=h;
   const x=c.getContext('2d');
+  x.scale(SS,SS);
   fn(x);
   SC[name]=c;
 }
@@ -1685,7 +1737,7 @@ function draw(){
   $.translate(sx,sy);
   drawBg();
   $.save();
-  $.translate(-Math.floor(camX),0);
+  $.translate(-camX,0);
   drawPlats();
   drawDeco();
   drawChests();
@@ -2491,6 +2543,7 @@ function startGame_(){
 
 buildSprites();
 (function loop(){
+  $.setTransform(RS,0,0,RS,0,0);
   update();
   draw();
   requestAnimationFrame(loop);
