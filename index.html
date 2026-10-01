@@ -234,7 +234,8 @@ function resizeCanvas(){
   const cont=document.getElementById('game-container');
   const rect=cont.getBoundingClientRect();
   const dpr=Math.min(window.devicePixelRatio||1,3);
-  RS=Math.max(1,Math.min(6,(rect.width*dpr)/W));
+  // Tope 3×: nítido y ligero también en pizarras 4K y PCs lentos
+  RS=Math.max(1,Math.min(3,(rect.width*dpr)/W));
   C.width=Math.round(W*RS);
   C.height=Math.round(H*RS);
   $.imageSmoothingEnabled=true;
@@ -376,6 +377,10 @@ document.addEventListener('keydown',e=>{
   }
 });
 
+const releaseAll=()=>{for(const k in keys)if(typeof keys[k]==='boolean')keys[k]=false;document.querySelectorAll('.pressed').forEach(b=>b.classList.remove('pressed'));};
+window.addEventListener('blur',releaseAll);
+document.addEventListener('visibilitychange',()=>{releaseAll();lastT=performance.now();acc=0;});
+
 document.addEventListener('keyup',e=>{
   if(e.key==='ArrowLeft'||e.key==='a')keys.left=false;
   if(e.key==='ArrowRight'||e.key==='d')keys.right=false;
@@ -389,12 +394,12 @@ document.querySelectorAll('[data-key]').forEach(btn=>{
   const k=btn.dataset.key;
   const on=()=>{initAudio();keys[k]=true;btn.classList.add('pressed')};
   const off=()=>{keys[k]=false;btn.classList.remove('pressed')};
-  btn.addEventListener('touchstart',e=>{e.preventDefault();on()});
-  btn.addEventListener('touchend',e=>{e.preventDefault();off()});
-  btn.addEventListener('touchcancel',e=>{e.preventDefault();off()});
-  btn.addEventListener('mousedown',on);
-  btn.addEventListener('mouseup',off);
-  btn.addEventListener('mouseleave',off);
+  // Pointer Events: igual con dedo, ratón o lápiz (pizarras digitales)
+  btn.addEventListener('pointerdown',e=>{e.preventDefault();on();try{btn.setPointerCapture(e.pointerId)}catch(_){}});
+  btn.addEventListener('pointerup',off);
+  btn.addEventListener('pointercancel',off);
+  btn.addEventListener('lostpointercapture',off);
+  btn.addEventListener('contextmenu',e=>e.preventDefault());
 });
 
 let mouseX=0,mouseY=0;
@@ -2542,12 +2547,21 @@ function startGame_(){
 }
 
 buildSprites();
-(function loop(){
+// Lógica a 60 pasos/s fijos aunque el equipo pinte menos fotogramas
+// (pizarras digitales y PCs lentos): el personaje va igual de rápido en todos.
+const STEP=1000/60;
+let lastT=performance.now(),acc=0;
+function loop(now){
+  acc+=Math.min(now-lastT,250);
+  lastT=now;
   $.setTransform(RS,0,0,RS,0,0);
-  update();
+  let steps=0;
+  while(acc>=STEP&&steps<6){update();acc-=STEP;steps++;}
+  if(steps>=6)acc=0;
   draw();
   requestAnimationFrame(loop);
-})();
+}
+requestAnimationFrame(loop);
 </script>
 </body>
 </html>
